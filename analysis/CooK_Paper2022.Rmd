@@ -1,0 +1,179 @@
+---
+title: "CooK_Paper2022"
+author: "massainesousa"
+date: "2022-06-08"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+"Cook15_KNN"
+## ASD
+```{r}
+library(gt)
+library(plyr)
+library(ggplot2)
+library(tidyverse)
+
+time_mod <- c("ASD_Mashed_Cook15_KNN","ASD_Mashed_Cook20_KNN","ASD_Mashed_Cook25_KNN",
+              "ASD_Mashed_Cook30_KNN","ASD_Mashed_Cook40_KNN","ASD_Mashed_Cook15_PLS",
+              "ASD_Mashed_Cook20_PLS","ASD_Mashed_Cook25_PLS","ASD_Mashed_Cook40_PLS",
+              "ASD_Mashed_Cook15_SVM","ASD_Mashed_Cook20_SVM","ASD_Mashed_Cook25_SVM",
+              "ASD_Mashed_Cook30_SVM","ASD_Mashed_Cook40_SVM","BUCCHI_Mashed_Cook15_KNN",
+              "BUCCHI_Mashed_Cook20_KNN","BUCCHI_Mashed_Cook25_KNN","BUCCHI_Mashed_Cook30_KNN",
+              "BUCCHI_Mashed_Cook40_KNN","BUCCHI_Mashed_Cook15_PLS","BUCCHI_Mashed_Cook20_PLS",
+              "BUCCHI_Mashed_Cook25_PLS","BUCCHI_Mashed_Cook30_PLS","BUCCHI_Mashed_Cook40_PLS",
+              "BUCCHI_Mashed_Cook15_SVM","BUCCHI_Mashed_Cook20_SVM","BUCCHI_Mashed_Cook25_SVM",
+              "BUCCHI_Mashed_Cook30_SVM","BUCCHI_Mashed_Cook40_SVM")
+
+time_mod1 <- c("Cook15_KNN","Cook20_KNN","Cook25_KNN","Cook30_KNN","Cook40_KNN",
+              "Cook15_PLS","Cook20_PLS","Cook25_PLS","Cook40_PLS",
+              "Cook15_SVM","Cook20_SVM","Cook25_SVM","Cook30_SVM","Cook40_SVM",
+              "Cook15_KNN","Cook20_KNN","Cook25_KNN","Cook30_KNN","Cook40_KNN",
+              "Cook15_PLS","Cook20_PLS","Cook25_PLS","Cook30_PLS","Cook40_PLS",
+              "Cook15_SVM","Cook20_SVM","Cook25_SVM","Cook30_SVM","Cook40_SVM")
+
+resCV <- list()
+parCM1 <- list()
+
+for (i in 1:length(time_mod)) {
+  load(here::here("data",paste("Results_","_Estr2.RData",sep = time_mod[i])))
+  
+  parCM <- matrix(NA,nrow=10,ncol=13)
+
+    for (j in 1:10) {
+      parCM[j,3:13] <- round(t(pCM[[j]]$`CM[[i]]$byClass`),2)
+      parCM[j,2] <- time_mod1[i] 
+      colnames(parCM) <- c("NIR","Time_mod" ,rownames(pCM[[1]]))
+    }
+  parCM1[[i]] <- as.data.frame(parCM)
+  resCV[[i]] <- resCV_2
+}
+resCV1 <- do.call(rbind,resCV)
+parCM1 <- do.call(rbind,parCM1)
+parCM1[1:140,1] <- "ASD"
+parCM1[141:nrow(parCM1),1] <- "BUCCHI"
+parCM1[,3:ncol(parCM1)] <- sapply(parCM1[,3:ncol(parCM1)], as.numeric)
+```
+
+## Tabela resultados CV
+```{r}
+head(resCV1)
+CV1mean <-resCV1%>%group_by(data,model)%>%
+  summarise(ROC = mean(ROC, na.rm = T),
+            Specificity = mean(Spec, na.rm = T),
+            Sensitivity = mean(Sens, na.rm = T)) 
+ 
+CV1mean %>% gt() %>% tab_options(table.font.size = pct(75))
+
+```
+
+## Plots resultados CV
+```{r}
+resCV1 <- separate(data = resCV1, col = data, into = c("NIR", "trait"), sep = "_")
+resCV1$model <- as.factor(resCV1$model)
+levels(resCV1$model)[levels(resCV1$model)=='pls'] <- 'PLS'
+resCV1$NIR <- as.factor(resCV1$NIR)
+resCV1$trait <- as.factor(resCV1$trait)
+
+Accuracy <- ggplot(resCV1, aes(x=model, y=ROC, fill=trait)) + ylab(" ") +
+  geom_boxplot() + theme_bw() + theme(legend.position = "none") + ylim(0.6, 1) + ggtitle("Accuracy - Cross Validation") + facet_grid(.~ NIR)
+
+Sens <- ggplot(resCV1, aes(x=model, y=Sens, fill=trait)) + ylab(" ") +
+  geom_boxplot() + theme_bw() + theme(legend.position = "none") + ylim(0.3, 1) + ggtitle("Sensitivity - Cross Validation") + facet_grid(.~ NIR)
+
+Spec <- ggplot(resCV1, aes(x=model, y=Spec, fill=trait)) + ylab(" ") +
+  geom_boxplot() + theme_bw() + theme(legend.position = "none") + ylim(0.5, 1) + ggtitle("Specificity - Cross Validation") + facet_grid(.~ NIR)
+  #scale_fill_manual(values = c("gray", "olivedrab4","orange3")) ##
+
+
+```
+
+## Tabela parametros da CV
+```{r}
+parCM1mean <-parCM1%>%group_by(NIR,Time_mod)%>%
+  summarise(Sensitivity = mean(Sensitivity),
+            Specificity=mean(Specificity),
+            PosPredValue = mean(`Pos Pred Value`), 
+            NegPredValue=mean(`Neg Pred Value`),
+            Precision=mean(Precision),
+            F1=mean(F1),Recall=mean(Recall),
+            Accuracy=mean(`Balanced Accuracy`))
+            
+parCM1mean %>% gt() %>% tab_options(table.font.size = pct(75))
+
+```
+
+## Plots parametros CV
+
+```{r}
+head(parCM1)
+parCM1 <- separate(data = parCM1, col = Time_mod, into = c("trait", "model"), sep = "_")
+parCM1$model <- as.factor(parCM1$model)
+parCM1$NIR <- as.factor(parCM1$NIR)
+parCM1$trait <- as.factor(parCM1$trait)
+
+Accuracy <- ggplot(parCM1, aes(x=model, y=`Balanced Accuracy`, fill=trait)) + ylab(" ") +
+  geom_boxplot() + theme_bw() + theme(legend.position = "none") + ylim(0.6, 1) + ggtitle("Accuracy - Cross Validation") + facet_grid(.~ NIR)
+
+Sens <- ggplot(parCM1, aes(x=model, y=Sensitivity, fill=trait)) + ylab(" ") +
+  geom_boxplot() + theme_bw() + theme(legend.position = "none") + ylim(0.3, 1) + ggtitle("Sensitivity - Cross Validation") + facet_grid(.~ NIR)
+
+Spec <- ggplot(parCM1, aes(x=model, y=Specificity, fill=trait)) + ylab(" ") +
+  geom_boxplot() + theme_bw() + theme(legend.position = "none") + ylim(0.5, 1) + ggtitle("Specificity - Cross Validation") + facet_grid(.~ NIR)
+
+```
+
+
+
+```{r}
+
+res4 <- as.data.frame(rbind(res2,res3))
+res4$trait <- rep(c("Cook4Classes"),nrow(res4))
+res4$NIR <- rep(c("ASD"),nrow(res4))
+
+library(ggplot2)
+
+Kappa <- ggplot(res4, aes(x=model, y=Kappa, fill=model)) + ylab(" ") +
+geom_boxplot()   + theme_bw() + theme(legend.position = "none")+ ylim(0.2, .8) + ggtitle("Mean Kappa - Cross Validation") +
+  scale_fill_manual(values = c("gray", "gray")) ##, "#56B4E9","olivedrab3","yellow","purple","red")) 
+
+Accuracy <- ggplot(res4, aes(x=model, y=Accuracy, fill=model)) + ylab(" ") +
+  geom_boxplot() + theme_bw() + theme(legend.position = "none") + ylim(0.2, .8) + ggtitle("Mean Accuracy - Cross Validation") +
+  scale_fill_manual(values = c("gray", "gray")) ##, "#56B4E9","olivedrab3","yellow","purple","red")) 
+
+AUC <- ggplot(res4, aes(x=model, y=AUC, fill=model)) + 
+  geom_boxplot()   + theme_bw() + #ylim(0, 1) + 
+  scale_fill_manual(values = c("olivedrab3", "orange")) ##, "#56B4E9","olivedrab3","yellow","purple","red")) 
+
+Sensi <- ggplot(res4, aes(x=model, y=Sensitivity, fill=model)) + 
+  geom_boxplot() + theme_bw() + #ylim(0.75, 1) + 
+  scale_fill_manual(values = c("olivedrab3", "orange")) ##, "#56B4E9","olivedrab3","yellow","purple","red")) 
+
+Spec <- ggplot(res4, aes(x=model, y=Specificity, fill=model)) + 
+  geom_boxplot() + theme_bw() + #ylim(0.75, 1) + 
+  scale_fill_manual(values = c("olivedrab3", "orange")) ##, "#56B4E9","olivedrab3","yellow","purple","red")) 
+
+ library(gridExtra)
+ tiff(file = "Figura4classes.tiff", width = 18, height =8, res = 700, compression = "lzw", units = "cm")
+ grid.arrange(Accuracy,Kappa, nrow=1)
+ dev.off()
+
+
+
+######################################################################################33
+CMt <- as.data.frame(rbind(KNNCM,SVMCM))
+
+KappaCM <- ggplot(CMt, aes(x=model, y=Kappa, fill=model)) + ylab(" ") +
+  geom_boxplot()   + theme_bw() + theme(legend.position = "none")+ ylim(0.2, .8) + ggtitle("Mean Kappa - Confusion matrix") +
+  scale_fill_manual(values = c("gray", "gray")) ##, "#56B4E9","olivedrab3","yellow","purple","red")) 
+
+AccuracyCM <- ggplot(CMt, aes(x=model, y=Accuracy, fill=model)) + ylab(" ") +
+  geom_boxplot() + theme_bw() + theme(legend.position = "none") + ylim(0.2, .8) + ggtitle("Mean Accuracy - Confusion matrix") +
+  scale_fill_manual(values = c("gray", "gray")) ##, "#56B4E9","olivedrab3","yellow","purple","red")) 
+
+library(gridExtra)
+tiff(file = "Figura4classesCM.tiff", width = 18, height =8, res = 700, compression = "lzw", units = "cm")
+grid.arrange(AccuracyCM,KappaCM, nrow=1)
+dev.off()
+```
+
