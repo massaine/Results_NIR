@@ -1,4 +1,4 @@
----
+"---
 title: "CooK_Paper2022"
 author: "massainesousa"
 date: "2022-06-08"
@@ -94,7 +94,7 @@ tiff(file = "Figura1_CV_binario.tiff", width = 14, height =24, res = 700, compre
 
 ```
 
-## Tabela parametros da CV
+## Tabela parametros da CM
 ```{r}
 parCM1mean <-parCM1%>%group_by(NIR,Time_mod)%>%
   summarise(Sensitivity = mean(Sensitivity),

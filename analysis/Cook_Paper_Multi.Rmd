@@ -1,0 +1,206 @@
+---
+title: "Cook_Paper_Multi"
+author: "massaine"
+date: "2022-07-04"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+## Resultados Multi
+```{r}
+library(gt)
+library(plyr)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+```
+
+## Load arquivos Multiclasse 4
+```{r}
+time_mod <- c("ASD_Multi_4c_Cook_KNN","ASD_Multi_4c_Cook_PLS","ASD_Multi_4c_Cook_SVM",
+              "BUCCHI_Multi_4c_Cook_KNN","BUCCHI_Multi_4c_Cook_PLS","BUCCHI_Multi_4c_Cook_SVM")
+
+time_mod1 <- c("4c_KNN","4c_PLS","4c_SVM","4c_KNN","4c_PLS","4c_SVM")
+
+resCV <- list()
+parCM_1 <- list()
+parCM_byclasse <- list()
+
+for (i in 1:length(time_mod)) {
+  load(here::here("data",paste("Results_","_Estr2.RData",sep = time_mod[i])))
+  parCM_byclasse[[i]] <- do.call("rbind",pCM)
+  parCM_1[[i]] <- as.data.frame(rCM) #geral
+  resCV[[i]] <- resCV_2
+}
+
+parCM_byclasse1 <- do.call(rbind,parCM_byclasse)
+parCM_byclasse1$Classe <- as.factor(rep(c("No","t20min","t30min","t40min"),dim(parCM_byclasse1)[1]/4))
+parCM_byclasse1$NIR <- as.factor(rep(c("ASD","BUCCHI"),each=dim(parCM_byclasse1)[1]/2))
+
+parCM1 <- do.call(rbind,parCM_1)
+parCM1$NIR <- as.factor(rep(c("ASD","BUCCHI"),each=dim(parCM1)[1]/2))
+parCM1$model <- as.factor(parCM1$model)
+
+resCV1 <- do.call(rbind,resCV)
+resCV1$model <- as.factor(resCV1$model)
+```
+
+## Load arquivos Multiclasse 6
+```{r}
+time_mod <- c("ASD_Multi_6c_Cook_KNN","ASD_Multi_6c_Cook_PLS","ASD_Multi_6c_Cook_SVM",
+              "BUCCHI_Multi_6c_Cook_KNN","BUCCHI_Multi_6c_Cook_PLS","BUCCHI_Multi_6c_Cook_SVM")
+
+time_mod1 <- c("6c_KNN","6c_PLS","6c_SVM","6c_KNN","6c_PLS","6c_SVM")
+
+resCV <- list()
+parCM_1 <- list()
+parCM_byclasse <- list()
+
+for (i in 1:length(time_mod)) {
+  load(here::here("data",paste("Results_","_Estr2.RData",sep = time_mod[i])))
+  parCM_byclasse[[i]] <- do.call("rbind",pCM)
+  parCM_1[[i]] <- as.data.frame(rCM) #geral
+  resCV[[i]] <- resCV_2
+}
+
+parCM_byclasse2 <- do.call(rbind,parCM_byclasse)
+parCM_byclasse2$Classe <- as.factor(rep(c("No","t15min","t20min","t25min","t30min","t40min"),dim(parCM_byclasse2)[1]/6))
+parCM_byclasse2$NIR <- as.factor(rep(c("ASD","BUCCHI"),each=dim(parCM_byclasse2)[1]/2))
+
+parCM2 <- do.call(rbind,parCM_1)
+parCM2$NIR <- as.factor(rep(c("ASD","BUCCHI"),each=dim(parCM2)[1]/2))
+parCM2$model <- as.factor(parCM2$model)
+
+resCV2 <- do.call(rbind,resCV)
+resCV2$model <- as.factor(resCV2$model)
+```
+
+
+## Tabela resultados CV - 4 e 6 CLASSES
+```{r}
+head(resCV1)
+resCV3 <- rbind(resCV1,resCV2)
+resCV3$data <- as.factor(resCV3$data)
+levels(resCV3$data)[levels(resCV3$data)=='BUCCHI_Multi_4c'] <- 'BUCCHI_Multi_4C'
+levels(resCV3$data)[levels(resCV3$data)=='BUCCHI_Multi_6c'] <- 'BUCCHI_Multi_6C'
+levels(resCV3$data)[levels(resCV3$data)=='ASD_Multi_6c'] <- 'ASD_Multi_6C'
+
+resCV3 <- separate(data = resCV3, col = data, into = c("NIR", "trait"), sep = "_Multi_")
+
+CV1mean <-resCV3%>%group_by(trait,NIR,model)%>%
+  summarise(Accuracy = mean(Accuracy, na.rm = T),
+            Kappa = mean(Kappa, na.rm = T),
+            AUC = mean(AUC, na.rm = T),
+            Specificity = mean(Specificity, na.rm = T),
+            Sensitivity = mean(Sensitivity, na.rm = T)) 
+
+CV1mean[,4:8] <- round(CV1mean[,4:8],2)
+CV1mean %>% gt() %>% tab_options(table.font.size = pct(75))
+
+```
+
+## Plots resultados CV
+```{r}
+resCV3$NIR <- as.factor(resCV3$NIR)
+resCV3$trait <- as.factor(resCV3$trait)
+
+levels(resCV3$trait)[levels(resCV3$trait)=='4C'] <- '4 Classes'
+levels(resCV3$trait)[levels(resCV3$trait)=='6C'] <- '6 Classes'
+levels(resCV3$model)[levels(resCV3$model)=='pls'] <- 'PLS'
+
+Accuracy <- ggplot(resCV3, aes(x=model, y=Accuracy , fill=NIR)) + ylab(" ") +
+  geom_boxplot(outlier.shape = NA) + theme_bw() + theme(legend.position = "bottom") + ylim(0.1, .9) + ggtitle("Accuracy - Cross Validation") + facet_grid(.~ trait)
+
+Kappa <- ggplot(resCV3, aes(x=model, y=Kappa , fill=NIR)) + ylab(" ") +
+  geom_boxplot(outlier.shape = NA) + theme_bw() + theme(legend.position = "bottom") + ylim(0.1, .9) + ggtitle("Kappa - Cross Validation") + facet_grid(.~ trait)
+
+AUC <- ggplot(resCV3, aes(x=model, y=AUC , fill=NIR)) + ylab(" ") +
+  geom_boxplot(outlier.shape = NA) + theme_bw() + theme(legend.position = "bottom") + ylim(0.6, 1) + ggtitle("AUC - Cross Validation") + facet_grid(.~ trait)
+
+Sens <- ggplot(resCV3, aes(x=model, y=Sensitivity, fill=NIR)) + ylab(" ") +
+  geom_boxplot(outlier.shape = NA) + theme_bw() + theme(legend.position = "bottom") + ylim(0.25, 1) + ggtitle("Sensitivity - Cross Validation")+ facet_grid(.~ trait)
+
+Spec <- ggplot(resCV3, aes(x=model, y=Specificity, fill=NIR)) + ylab(" ") +
+  geom_boxplot(outlier.shape = NA) + theme_bw() + theme(legend.position = "bottom") + ylim(0.25, 1) + ggtitle("Specificity - Cross Validation") + facet_grid(.~ trait)
+  #scale_fill_manual(values = c("gray", "olivedrab4","orange3")) ##
+
+library(ggpubr)
+tiff(file = "Figura5_CV_multiclasses.tiff", width = 16, height =20, res = 700, compression = "lzw", units = "cm")
+ ggarrange(Accuracy,Kappa,Sens,Spec, ncol=2,nrow=2, common.legend = TRUE, legend="bottom")
+ dev.off()
+
+```
+
+## Tabela parametros da CM (resultado geral)
+```{r}
+parCM3 <- rbind(parCM1,parCM2)
+parCM3 <- separate(data = parCM3, col = data, into = c("NIR", "trait"), sep = "_Multi_")
+parCM3$trait <- as.factor(parCM3$trait)
+
+levels(parCM3$trait)[levels(parCM3$trait)=='4C'] <- '4 Classes'
+levels(parCM3$trait)[levels(parCM3$trait)=='6C'] <- '6 Classes'
+levels(parCM3$trait)[levels(parCM3$trait)=='4c'] <- '4 Classes'
+levels(parCM3$trait)[levels(parCM3$trait)=='6c'] <- '6 Classes'
+levels(parCM3$model)[levels(parCM3$model)=='pls'] <- 'PLS'
+
+parCM1mean <-parCM3%>%group_by(trait,NIR,model)%>%
+  summarise(Accuracy=mean(Accuracy),
+            Kappa=mean(Kappa))
+ 
+parCM1mean[,4:5] <- round(parCM1mean[,4:5],2)           
+parCM1mean %>% gt() %>% tab_options(table.font.size = pct(75))
+```
+
+## PLOT parametros da CM (resultado geral)
+```{r}
+parCM1mean 
+
+Accuracy <- ggplot(parCM3, aes(x=model, y=Accuracy , fill=NIR)) + ylab(" ") +
+  geom_boxplot(outlier.shape = NA) + theme_bw() + theme(legend.position = "bottom") + ylim(0, 0.9) + ggtitle("Accuracy - External validation") + facet_grid(.~ trait)
+
+Kappa <- ggplot(parCM3, aes(x=model, y=Kappa , fill=NIR)) + ylab(" ") +
+  geom_boxplot(outlier.shape = NA) + theme_bw() + theme(legend.position = "bottom") + ylim(0, .9) + ggtitle("Kappa - External validation") + facet_grid(.~ trait)
+  
+tiff(file = "Figura6_ConfMatrix_geral_Multi.tiff", width = 16, height =14, res = 700, compression = "lzw", units = "cm")
+ ggarrange(Accuracy,Kappa, nrow=1, common.legend = TRUE, legend="bottom")
+ dev.off()
+  
+```
+
+
+## Tabela parametros da CM (resultado por classe)
+```{r}
+parCM_byclasse1$trait <- "4 Classes"
+parCM_byclasse2$trait <- "6 Classes"
+parCM_byclasse3 <- rbind(parCM_byclasse1,parCM_byclasse2)
+parCM_byclasse3$trait <- as.factor(parCM_byclasse3$trait)
+parCM_byclasse3$Model <- as.factor(parCM_byclasse3$Model)
+levels(parCM_byclasse3$Model)[levels(parCM_byclasse3$Model)=='pls'] <- 'PLS'
+
+parCM_byclasse1mean <-parCM_byclasse3%>%group_by(NIR,trait,Classe,Model)%>%
+  summarise(Sensitivity = mean(Sensitivity),
+            Specificity=mean(Specificity),
+            PosPredValue = mean(`Pos Pred Value`), 
+            NegPredValue=mean(`Neg Pred Value`),
+            Precision=mean(Precision),
+            F1=mean(F1),Recall=mean(Recall),
+            Accuracy=mean(`Balanced Accuracy`))
+
+parCM_byclasse1mean[,5:12] <- round(parCM_byclasse1mean[,5:12],2)
+           
+parCM_byclasse1mean %>% gt() %>% tab_options(table.font.size = pct(75))
+
+```
+
+
+
+
+
+
+```{r}
+
+
+```
+
+
