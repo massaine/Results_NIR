@@ -184,9 +184,10 @@ for (i in 1:15) {
  
 pl[[i]] <- ggplot(plt, aes(Prediction,Reference, fill= Freq)) +
         geom_tile() + geom_text(aes(label=Freq)) + labs(title= paste("ASD",time_mod1[i],sep = " ") ) +
-        scale_fill_gradient(low="white", high="dodgerblue3") +
+        scale_fill_gradient(low="red", high="dodgerblue3") +
        labs(x = "Prediction",y ="Reference" ) +theme_bw() + theme(legend.position = "none",plot.title = element_text(size=10)) 
 }
+
 tiff(file = "Figura3_CM_ASD_binario.tiff", width = 26, height =12, res = 700, compression = "lzw", units = "cm")
  do.call(ggarrange, c(pl, nrow = 3,ncol=5) )
 dev.off()

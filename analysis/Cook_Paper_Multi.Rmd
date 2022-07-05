@@ -23,6 +23,9 @@ time_mod <- c("ASD_Multi_4c_Cook_KNN","ASD_Multi_4c_Cook_PLS","ASD_Multi_4c_Cook
 
 time_mod1 <- c("4c_KNN","4c_PLS","4c_SVM","4c_KNN","4c_PLS","4c_SVM")
 
+time_mod2 <- c("ASD (KNN)","ASD (PLS)","ASD (SVM)",
+              "BUCCHI (KNN)","BUCCHI (PLS)","BUCCHI (SVM)")
+
 resCV <- list()
 parCM_1 <- list()
 parCM_byclasse <- list()
@@ -194,13 +197,80 @@ parCM_byclasse1mean %>% gt() %>% tab_options(table.font.size = pct(75))
 ```
 
 
-
-
-
-
+## Plot da matriz de confusao _ multiclasses (media entre as 10 repeticoes)
 ```{r}
+time_mod <- c("ASD_Multi_4c_Cook_KNN","ASD_Multi_4c_Cook_PLS","ASD_Multi_4c_Cook_SVM",
+              "BUCCHI_Multi_4c_Cook_KNN","BUCCHI_Multi_4c_Cook_PLS","BUCCHI_Multi_4c_Cook_SVM")
+time_mod2 <- c("ASD (KNN)","ASD (PLS)","ASD (SVM)",
+              "BUCCHI (KNN)","BUCCHI (PLS)","BUCCHI (SVM)")
 
+pl <- list()
+res1 <- list()
+for (i in 1:length(time_mod)) {
+  load(here::here("data",paste("Results_","_Estr2.RData",sep = time_mod[i])))
+  x <- tCM[[1]]
+  total <- sum(tCM[[2]][,1])  
 
+   for (d in 1:4) {  
+    x[1,d] <- round((mean(tCM[[2]][1,d]))*100/total,0)
+    x[2,d] <- round((mean(tCM[[2]][2,d]))*100/total,0)
+    x[3,d] <- round((mean(tCM[[2]][3,d]))*100/total,0)
+    x[4,d] <- round((mean(tCM[[2]][4,d]))*100/total,0)
+    plt <- as.data.frame(x)
+  }
+  
+  res1[[i]] <- x
+  
+  pl[[i]] <- ggplot(plt, aes(Prediction,Reference, fill= Freq)) +
+        geom_tile() + geom_text(aes(label=Freq)) + labs(title= time_mod2[i]) +
+        scale_fill_gradient(low="red", high="dodgerblue3") +
+        labs(x = "Prediction",y ="Reference" ) +theme_bw() + 
+        theme(legend.position = "none",plot.title = element_text(size=10)) 
+}
+
+tiff(file = "Figura7_ConfMatrix_4C_Multiclasses.tiff", width = 22, height =8, res = 700, compression = "lzw", units = "cm")
+ do.call(ggarrange, c(pl, nrow = 2,ncol=3) )
+dev.off()
 ```
 
+## Plot da matriz de confusao: 6C multiclasses (media entre as 10 repeticoes)
+```{r}
+time_mod <- c("ASD_Multi_6c_Cook_KNN","ASD_Multi_6c_Cook_PLS","ASD_Multi_6c_Cook_SVM",
+              "BUCCHI_Multi_6c_Cook_KNN","BUCCHI_Multi_6c_Cook_PLS","BUCCHI_Multi_6c_Cook_SVM")
+time_mod2 <- c("ASD (KNN)","ASD (PLS)","ASD (SVM)",
+              "BUCCHI (KNN)","BUCCHI (PLS)","BUCCHI (SVM)")
+
+pl <- list()
+res1 <- list()
+
+for (i in 1:length(time_mod)) {
+  load(here::here("data",paste("Results_","_Estr2.RData",sep = time_mod[i])))
+  
+  x <- tCM[[1]]
+  total <- sum(tCM[[2]][,1])  
+
+   for (d in 1:6) {  
+    x[1,d] <- round((mean(tCM[[2]][1,d]))*100/total,0)
+    x[2,d] <- round((mean(tCM[[2]][2,d]))*100/total,0)
+    x[3,d] <- round((mean(tCM[[2]][3,d]))*100/total,0)
+    x[4,d] <- round((mean(tCM[[2]][4,d]))*100/total,0)
+    x[5,d] <- round((mean(tCM[[2]][5,d]))*100/total,0)
+    x[6,d] <- round((mean(tCM[[2]][6,d]))*100/total,0)
+    plt <- as.data.frame(x)
+  }
+  
+  res1[[i]] <- x
+  
+  pl[[i]] <- ggplot(plt, aes(Prediction,Reference, fill= Freq)) +
+        geom_tile() + geom_text(aes(label=Freq)) + labs(title= time_mod2[i]) +
+        scale_fill_gradient(low="red", high="dodgerblue3") +
+        labs(x = "Prediction",y ="Reference" ) +theme_bw() + 
+        theme(legend.position = "none",plot.title = element_text(size=10)) 
+}
+
+tiff(file = "Figura8_ConfMatrix_6C_Multiclasses.tiff", width = 26, height =10, res = 700, compression = "lzw", units = "cm")
+ do.call(ggarrange, c(pl, nrow = 2,ncol=3) )
+dev.off()
+
+```
 
